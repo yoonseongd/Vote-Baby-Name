@@ -1,7 +1,12 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 
-void main() => runApp(MyApp());
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp();
+  runApp(MyApp());
+}
 
 final dummySnapshot = [
   {"name": "Filip", "votes": 15},
@@ -38,18 +43,25 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   Widget _buildBody(BuildContext context) {
-    return _buildList(context, dummySnapshot);
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance.collection('baby').snapshots(),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) return LinearProgressIndicator();
+
+        return _buildList(context, snapshot.data.docs);
+      },
+    );
   }
 
-  Widget _buildList(BuildContext context, List<Map> snapshot) {
+  Widget _buildList(BuildContext context, List<DocumentSnapshot> snapshot) {
     return ListView(
       padding: const EdgeInsets.only(top: 20.0),
       children: snapshot.map((data) => _buildListItem(context, data)).toList(),
     );
   }
 
-  Widget _buildListItem(BuildContext context, Map data) {
-    final record = Record.fromMap(data);
+  Widget _buildListItem(BuildContext context, DocumentSnapshot data) {
+    final record = Record.fromSnapshot(data);
 
     return Padding(
       key: ValueKey(record.name),
@@ -60,10 +72,10 @@ class _MyHomePageState extends State<MyHomePage> {
           borderRadius: BorderRadius.circular(5.0),
         ),
         child: ListTile(
-          title: Text(record.name),
-          trailing: Text(record.votes.toString()),
-          onTap: () => print(record),
-        ),
+            title: Text(record.name),
+            trailing: Text(record.votes.toString()),
+            onTap: () =>
+                record.reference.update({'votes': FieldValue.increment(1)})),
       ),
     );
   }
@@ -80,8 +92,8 @@ class Record {
         name = map['name'],
         votes = map['votes'];
 
-  // Record.fromSnapshot(DocumentSnapshot snapshot)
-  //     : this.fromMap(snapshot.data, reference: snapshot.reference);
+  Record.fromSnapshot(DocumentSnapshot snapshot)
+      : this.fromMap(snapshot.data(), reference: snapshot.reference);
 
   @override
   String toString() => "Record<$name:$votes>";

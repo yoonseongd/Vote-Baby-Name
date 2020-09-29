@@ -59,7 +59,7 @@ flutter {
     source '../..'
 }
 dependencies {
-  false
+  implementation 'com.google.firebase:firebase-analytics:17.2.2'
 
   // add SDKs for desired Firebase products
   // https://firebase.google.com/docs/android/setup#available-libraries
